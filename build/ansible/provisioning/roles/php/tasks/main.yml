@@ -1,0 +1,74 @@
+- name: "Update existing packages"
+  apt:
+    update_cache: yes
+
+- name: install requirements
+  apt: name={{ item }} state=present
+  with_items: [zlib1g-dev]
+
+- name: Add Ondrej Surys apt key.
+  apt_key:
+    url: https://packages.sury.org/php/apt.gpg
+    state: present
+
+- name: Add Ondrej repo.
+  apt_repository:
+    repo: "deb https://packages.sury.org/php/ {{ ansible_distribution_release }} main"
+    state: present
+  register: php_ondrej_debian_repo
+
+- name: "Update existing packages"
+  apt:
+    update_cache: yes
+
+- name: install php requirements
+  apt: name=php{{ php_version }}-{{ item }} state=present
+  with_items: [xml,json,mbstring,intl,opcache,mysql,json,fpm,curl,common,yaml,memcached,dev,redis,bcmath]
+
+- name: install php{{ php_version }}
+  apt: name=php{{ php_version }}-fpm state=present
+
+- name: delete default config
+  file:
+    path: "/etc/php/{{ php_version }}/fpm/pool.d/www.conf"
+    state: absent
+
+- name: delete CLI php.ini
+  file:
+    path: "/etc/php/{{ php_version }}/cli/php.ini"
+    state: absent
+
+- name: render php CLI php.ini
+  template: src=php-ini.j2 dest=/etc/php/{{ php_version }}/cli/php.ini
+  with_items: '{{ apps }}'
+
+- name: delete FPM php.ini
+  file:
+    path: "/etc/php/{{ php_version }}/fpm/php.ini"
+    state: absent
+
+- name: render php FPM php.ini
+  template: src=php-ini.j2 dest=/etc/php/{{ php_version }}/fpm/php.ini
+  with_items: '{{ apps }}'
+  notify: restart php-fpm
+
+- name: render php fpm pools config
+  template: src=pool-template.j2 dest=/etc/php/{{ php_version }}/fpm/pool.d/{{ item.name }}.conf
+  with_items: '{{ apps }}'
+  notify: restart php-fpm
+
+- name: Updating PECL channels.
+  shell: pecl update-channels
+  register: pecl_updatechannels
+  changed_when: "'succeeded' in pecl_updatechannels"
+
+- name: Install PECL libaries.
+  shell: "yes '' | pecl install {{ item }}"
+  register: pecl_result
+  changed_when: pecl_result is succeeded
+  failed_when: "not (('already installed' in pecl_result.stdout) or ('install ok:' in pecl_result.stdout))"
+  with_items: [xdebug,memcache,redis]
+
+- name: restart php fpm
+  command: /bin/true
+  notify: restart php-fpm

@@ -1,0 +1,33 @@
+server {
+    server_name dev.project.com project.com;
+    access_log /var/log/nginx/web.access.log;
+    error_log /var/log/nginx/web.error.log;
+    root /srv/www/project/public/web/;
+    listen 80;
+
+    if (-f $request_filename) {
+            break;
+    }
+    rewrite  ^(.*)$  /index.php break;
+
+    proxy_buffer_size   512k;
+    proxy_buffers   32 512k;
+    proxy_busy_buffers_size   512k;
+    client_max_body_size 200M;
+
+    location ~ \.php$ {
+           fastcgi_buffers 8 256k;
+           fastcgi_buffer_size 128k;
+           fastcgi_send_timeout  5m;
+           fastcgi_read_timeout 5m;
+           fastcgi_connect_timeout 5m;
+           fastcgi_param PLATFORM_COUNTRY "DE";
+           fastcgi_param PLATFORM_LANGUAGE "de";
+           try_files $uri =404;
+           proxy_set_header Host $http_host;
+           fastcgi_pass unix:/run/php/php-{{ php_version }}-fpm.sock;
+           fastcgi_index web.php;
+           fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+           include fastcgi_params;
+    }
+}

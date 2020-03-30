@@ -1,0 +1,5 @@
+- name: Install Nginx web server
+  become: true
+  apt:
+    name: nginx
+    state: latest

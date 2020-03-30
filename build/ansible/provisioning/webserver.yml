@@ -1,0 +1,26 @@
+---
+
+- hosts: all
+  become: yes
+  become_user: root
+  roles:
+    - general
+
+- hosts: webserver
+  become: yes
+  become_user: root
+  roles:
+    - mysql
+    #- demo_database
+    - nginx
+    - php
+    - nginx_project
+    - redis
+    - memcached
+    - rabbitmq
+    - maxmind-geoip
+  pre_tasks:
+    - name: Set discovered Ansible Python interpreter.
+      set_fact:
+        ansible_python_interpreter: "{{ ansible_facts.python.executable }}"
+      when: ansible_python_interpreter is not defined

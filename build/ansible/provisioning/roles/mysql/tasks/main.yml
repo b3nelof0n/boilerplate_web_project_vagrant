@@ -1,0 +1,80 @@
+---
+# tasks file for mysql
+
+- name: "mysql: check whether we are installing a supported flavour"
+  fail:
+    msg: "This role only supports MariaDB or Percona."
+  when: mysql_flavour != "percona" and mysql_flavour != "mariadb"
+
+- name: "mysql: install required packages for mysql manipulation via Ansible"
+  apt:
+    pkg: python-mysqldb
+    state: present
+
+# Do flavour-specific tasks
+- include: percona.yml
+  when: mysql_flavour == "percona"
+
+- include: mariadb.yml
+  when: mysql_flavour == "mariadb"
+
+- name: "mysql: remove deprecated configuration files"
+  file:
+    path: "{{ mysql_confd }}/{{ item }}"
+    state: absent
+  with_items:
+    - 00-default.cnf
+    - 60-default.cnf
+
+- name: "mysql: copy configuration"
+  template:
+    src: mysql/default.cnf.j2
+    dest: "{{ mysql_confd }}/80-ansible-default.cnf"
+    owner: root
+    group: root
+    mode: 0644
+  notify: restart mysql
+
+# MySQL user and database configuration
+- name: "mysql: remove default test database"
+  mysql_db:
+    name: test
+    state: absent
+    config_file: /etc/mysql/debian.cnf
+
+- name: "mysql: delete anonymous user"
+  mysql_user:
+    name: ""
+    state: absent
+    config_file: /etc/mysql/debian.cnf
+
+- name: "mysql: create user databases"
+  mysql_db:
+    name: "{{ item }}"
+    config_file: /etc/mysql/debian.cnf
+  with_items:
+  - "{{ mysql_databases }}"
+  when: mysql_databases is defined
+
+- name: "mysql: configure root user"
+  mysql_user:
+    name: root
+    password: "{{ mysql_root_password }}"
+    encrypted: "{{ mysql_root_password_encrypted|default('yes') }}"
+    priv: "*.*:ALL,GRANT"
+    host: "%"
+    state: present
+    config_file: /etc/mysql/debian.cnf
+  when: mysql_root_password is defined
+
+- name: "mysql: configure other users"
+  mysql_user:
+    name: "{{ item.value.username }}"
+    password: "{{ item.value.password|default(omit) }}"
+    encrypted: "{{ item.value.password_encrypted|default('no') }}"
+    priv: "{{ item.value.priv|default(omit) }}"
+    host: "{{ item.value.host }}"
+    state: present
+    config_file: /etc/mysql/debian.cnf
+  with_dict: "{{ mysql_users }}"
+  when: mysql_users is defined

@@ -1,0 +1,14 @@
+- name: delete tracker config
+  file:
+    path: "/etc/nginx/sites-enabled/admin.conf"
+    state: absent
+
+- name: delete default config
+  file:
+    path: "/etc/nginx/sites-enabled/default"
+    state: absent
+
+- name: render php fpm pools config
+  template: src=www-template.j2 dest=/etc/nginx/sites-enabled/admin.conf
+  with_items: '{{ apps }}'
+  notify: restart nginx

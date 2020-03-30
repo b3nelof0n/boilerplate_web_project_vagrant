@@ -1,0 +1,123 @@
+---
+# tasks file for percona-flavoured MySQL
+
+- name: "mysql/percona: ensure the percona-release package is installed"
+  package:
+    name: percona-release
+    state: present
+  check_mode: yes
+  register: percona_release_installed
+  failed_when: False
+
+- name: "mysql/percona: install percona repository package"
+  apt:
+    deb: https://repo.percona.com/apt/percona-release_latest.generic_all.deb
+  register: apt_repository
+  when:
+    - not percona_release_installed.changed
+    - not ansible_check_mode
+
+- name: "mysql/percona: configure repository for percona 8.0 if requested"
+  shell: percona-release setup ps80
+  when:
+    - mysql_version == "8.0"
+    - not ansible_check_mode
+
+- name: "mysql/percona: update apt cache"
+  apt:
+    update_cache: yes
+  when: apt_repository.changed
+
+- name: "mysql/percona: install percona server and tools"
+  apt:
+    pkg:
+      - "percona-server-common-{{ mysql_version }}"
+      - "percona-server-client-{{ mysql_version }}"
+      - "percona-server-server-{{ mysql_version }}"
+      - percona-toolkit
+      - percona-xtrabackup-24
+      - libcache-cache-perl
+      - libcache-perl
+    state: present
+  when: mysql_version != "8.0"
+
+- name: "mysql/percona: install percona server and tools"
+  apt:
+    pkg:
+      - percona-server-common
+      - percona-server-client
+      - percona-server-server
+      - percona-toolkit
+      - percona-xtrabackup-80
+      - libcache-cache-perl
+      - libcache-perl
+    state: present
+  when: mysql_version == "8.0"
+
+- name: "mysql/percona: install nagios percona server and tools (jessie and earlier)"
+  apt:
+    pkg: percona-nagios-plugins
+    state: present
+  when: ansible_distribution_version|int <= 8
+
+- name: "mysql/percona: install nagios percona server and tools (strech and up)"
+  apt:
+    pkg: nagios-plugins-contrib
+    state: present
+  when: ansible_distribution_version|int >= 9
+
+- name: "mysql/percona: configure user authentication for MySQL 8.0"
+  template:
+    src: mysql/mysql8-authentication.cnf.j2
+    dest: /etc/mysql/conf.d/mysql8_authentication.cnf
+    mode: 0644
+  when: mysql_version == "8.0"
+
+- name: "mysql/percona: check if we have a debian.cnf config file"
+  stat:
+    path: /etc/mysql/debian.cnf
+  register: debian_sys_maint_result
+
+- name: "mysql/percona: create a random password for the debian-sys-maint user"
+  shell : "< /dev/urandom tr -dc _A-Z-a-z-0-9 | head -c${1:-25};echo; "
+  register: debian_sys_maint_password
+  when: not debian_sys_maint_result.stat.exists
+
+- name: "mysql/percona: create the debian-sys-maint user in MySQL"
+  mysql_user:
+    name: "debian-sys-maint"
+    password: "{{ debian_sys_maint_password.stdout }}"
+    priv: '*.*:ALL,GRANT'
+    state: present
+  when: not debian_sys_maint_result.stat.exists
+
+- name: "mysql/percona: create a debian.cnf file for the debian-sys-maint user"
+  template:
+    src: mysql/debian.cnf.j2
+    dest: /etc/mysql/debian.cnf
+    owner: root
+    group: root
+    mode: 0600
+  when: not debian_sys_maint_result.stat.exists
+
+# This generates a warning, see https://github.com/ansible/ansible/issues/41313
+- name: "mysql/percona: flush handlers, restarts MySQL to enable authentication-plugin-default"
+  meta: flush_handlers
+
+- name: "mysql/percona: remove default users"
+  mysql_user:
+    name: "{{ item.name }}"
+    host: "{{ item.host }}"
+    state: absent
+    config_file: /etc/mysql/debian.cnf
+  with_items:
+    - { name: 'root', host: '127.0.0.1' }
+    - { name: 'root', host: '::1' }
+    - { name: 'root', host: 'localhost' }
+    - { name: 'root', host: '{{ ansible_fqdn }}' }
+    - { name: '', host: 'localhost' }
+    - { name: '', host: '{{ ansible_fqdn }}' }
+
+- name: "mysql/percona: export confd path variable"
+  set_fact:
+    mysql_confd: "/etc/mysql/conf.d/"

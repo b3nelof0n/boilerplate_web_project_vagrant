@@ -1,0 +1,34 @@
+- name: import base database
+  run_once: true
+  mysql_db:
+    name: {{ mysql_databases }}
+    state: import
+    config_file: /etc/mysql/debian.cnf
+    target: /srv/www/project/build/ansible/provisioning/roles/demo_database/templates/base_databases.j2
+
+- name: import landingpage database
+  run_once: true
+  mysql_db:
+    name: {{ mysql_databases }}
+    state: import
+    config_file: /etc/mysql/debian.cnf
+    target: /srv/www/project/build/ansible/provisioning/roles/demo_database/templates/landingpage_databases.j2
+
+- name: import stats database
+  run_once: true
+  mysql_db:
+    name: {{ mysql_databases }}
+    state: import
+    config_file: /etc/mysql/debian.cnf
+    target: /srv/www/project/build/ansible/provisioning/roles/demo_database/templates/stats_databases.j2
+
+
+- name: Sync Important Base Database Data
+  run_once: true
+  command: "pt-table-sync --execute h={{ mysql_base_host }},u=root,p={{ mysql_root_password }},D={{ mysql_databases }},t={{item}} h=localhost"
+  register: command_result
+  failed_when: "'FAILED' in command_result.stderr"
+  with_items:
+    - "user"
+    - "cronjob"
+    - "statistics_fields"

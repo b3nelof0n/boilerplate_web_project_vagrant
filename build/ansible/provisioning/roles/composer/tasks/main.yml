@@ -1,0 +1,6 @@
+---
+- include: install.yml
+  when: php.composer.install
+  tags:
+    - php
+    - composer

@@ -1,0 +1,11 @@
+---
+- name: Manage RabbitMQ users and privileges
+  run_once: true
+  command: "{{item}}"
+  register: command_result
+  failed_when: "'FAILED' in command_result.stderr"
+  with_items:
+    - "rabbitmqctl add_user root fuckzu10"
+    - "rabbitmqctl set_permissions -p / root \".*\" \".*\" \".*\""
+    - "rabbitmqctl set_user_tags root administrator"
+

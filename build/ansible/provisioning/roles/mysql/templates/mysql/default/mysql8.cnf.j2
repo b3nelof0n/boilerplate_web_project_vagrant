@@ -1,0 +1,72 @@
+[mysqld]
+
+# Network settings
+skip-name-resolve
+bind-address = {{ mysql_bind_address|default('0.0.0.0') }}
+
+# Storage engine settings
+innodb_file_per_table = 1
+innodb_thread_concurrency = {{ mysql_innodb_thread_concurrency|default('16') }}
+innodb_buffer_pool_size = {{ mysql_innodb_buffer_pool_size|default('2048M') }}
+innodb_flush_log_at_trx_commit = {{ mysql_innodb_flush_log_at_trx_commit|default('1') }}
+innodb_log_file_size = {{ mysql_innodb_log_file_size| default('4M') }}
+innodb_log_buffer_size = 256K
+innodb-flush-method = O_DIRECT
+innodb_sort_buffer_size = 2M
+innodb_write_io_threads = {{ mysql_innodb_write_io_threads|default('4') }}
+innodb_read_io_threads = {{ mysql_innodb_read_io_threads|default('4') }}
+innodb_buffer_pool_instances = {{ mysql_innodb_buffer_pool_instances|default('8') }}
+
+# Improve INFORMATION_SCHEMA performance
+innodb_stats_on_metadata = 0
+
+myisam_sort_buffer_size = 4M
+key_buffer_size = 512K
+sort_buffer_size = 2M
+join_buffer_size = 128K
+
+max_heap_table_size = 32M
+tmp_table_size = 32M
+
+# Connection settings
+max_connections = {{ mysql_max_connections|default('500') }}
+max_user_connections = {{ mysql_user_connections|default('400') }}
+max_allowed_packet = 16M
+wait_timeout = 3000
+connect_timeout = 1000
+interactive_timeout = 3000
+
+table-open-cache = 15
+open_files_limit = 100
+
+slow-query-log-file = /var/log/mysql/mysql-slow.log
+log-error = /var/log/mysql/err.log
+
+{% if mysql_sql_mode is defined %}
+sql_mode={{ mysql_sql_mode }}
+{% endif %}
+
+{% if mysql_server_id is defined %}
+server-id = {{ mysql_server_id }}
+{% endif %}
+
+{% if mysql_binlog_format is defined %}
+binlog-format = {{ mysql_binlog_format }}
+{% endif %}
+
+{% if mysql_log_bin is defined %}
+log_bin = {{ mysql_log_bin }}
+{% endif %}
+
+{% if mysql_expire_logs_days is defined %}
+binlog_expire_logs_seconds = {{ binlog_expire_logs_seconds }}
+{% endif %}
+
+{% if mysql_slave is defined %}
+read-only = 1
+sync_binlog = 0
+
+#force naming of slave relaylogs for replication
+relay-log=slave-relay-bin
+relay-log-index=slave-relay-bin.index
+{% endif %}

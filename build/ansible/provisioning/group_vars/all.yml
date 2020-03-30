@@ -1,0 +1,61 @@
+locale: en_US.UTF-8
+
+apps:
+    - name: project
+      user: vagrant
+      group: vagrant
+
+php_version: 7.1
+
+mysql_base_host: 148.72.152.93
+
+mysql_version: "5.7"
+mysql_flavour: "percona"
+mysql_root_password: mysql_root_password
+mysql_root_password_encrypted: no
+mysql_sql_mode: ""
+mysql_databases: mysql_databases
+mysql_users:
+  myuser:
+    username: username
+    password: password
+    password_encrypted: no
+    priv: "example.*:ALL"
+    host: "%"
+
+mysql_character_set_server: "utf8mb4"
+mysql_collation_server: "utf8mb4_unicode_ci"
+
+
+# rabbitmq TCP configuration
+rabbitmq_tcp_address: '127.0.0.1'
+rabbitmq_tcp_port: 5672
+rabbitmq_cluster: False
+rabbitmq_erlang_cookie: 'THISISACOOKIEMONSTER'
+rabbitmq_plugins: ["rabbitmq_management_agent", "rabbitmq_management"]
+
+rabbitmq_conf_hostname: dev
+rabbitmq_conf_env:
+  NODENAME: dev
+
+rabbitmq_users:
+  - user: root
+    password: fuckzu10             # Optional, defaults to ""
+
+maxmind_update_package_debian: 'http://ftp.nl.debian.org/debian/pool/contrib/g/geoipupdate/geoipupdate_2.5.0-1~bpo9+1_amd64.deb'
+
+# Credentials (these defaults are for the free databases)
+maxmind_update_userid: 'maxmind_update_userid'
+maxmind_update_licensekey: 'maxmind_update_licensekey'
+
+# These are the free databases, should you have a subscription change these values
+maxmind_update_product_ids:
+  - GeoLite2-City
+  - GeoLite2-Country
+  - GeoIP2-ISP
+  - 111
+
+# Every tuesday the databases get updated at Maxmind
+# The free databases are only updated the first tuesday of the month
+maxmind_cron_hour: 15
+maxmind_cron_minute: 15

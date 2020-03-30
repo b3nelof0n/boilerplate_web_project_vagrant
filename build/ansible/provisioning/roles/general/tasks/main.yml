@@ -1,0 +1,38 @@
+- name: "Install Packages"
+  apt:
+    pkg: "{{ item }}"
+    state: latest
+    update_cache: yes
+    cache_valid_time: 3600
+  with_items:
+    - aptitude
+    - htop
+    - apt-transport-https
+    - ca-certificates
+
+- name: install package locales
+  apt: name=locales state=present
+  when: ansible_pkg_mgr == "apt"
+
+- name: genereate the server locale
+  locale_gen: name={{ locale }} state=present
+
+- name: set locale
+  lineinfile:
+    dest: '/etc/default/locale'
+    regexp: '^LANG'
+    line: 'LANG={{ locale }}'
+
+- name: update-locale
+  command: update-locale LC_ALL={{ locale }} LANG={{ locale }}
+
+- name: Fix /etc/hosts removing the old hostname
+  tags:
+    - hosts
+  lineinfile:
+    state=present
+    dest=/etc/hosts
+    line="{{ ansible_default_ipv4.address }} {{ inventory_hostname }} {{ ansible_hostname }}"
+    regexp="^{{ ansible_default_ipv4.address }}"
+  when:
+    ansible_fqdn != inventory_hostname

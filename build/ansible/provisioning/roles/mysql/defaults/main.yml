@@ -1,0 +1,19 @@
+---
+# defaults file for mysql
+
+#mysql_databases:
+#  - example
+
+#mysql_users:
+#  myuser:
+#    username: myuser
+#    password: mypassword
+#    priv: "example.*:ALL"
+#    host: "%"
+
+#mysql_root_password: my_password
+#mysql_root_password_encrypted: no
+
+mysql_version: "5.6"
+
+mysql_flavour: percona

@@ -1,0 +1,26 @@
+---
+# tasks file for mysql/mariadb
+
+- name: "mysql/mariadb: install mariadb server and tools"
+  apt:
+    pkg:
+      - "mariadb-server-{{ mysql_version }}"
+      - "mariadb-client-{{ mysql_version }}"
+    state: present
+
+- name: "mysql/mariadb: check if server configuration file exists"
+  stat:
+    path: /etc/mysql/mariadb.conf.d/50-server.cnf
+  register: p
+
+- name: "mysql/mariadb: patch server configuration file"
+  replace:
+    path: /etc/mysql/mariadb.conf.d/50-server.cnf
+    regexp: '^bind-address		= 127.0.0.1'
+    replace: '#bind-address		= 127.0.0.1'
+  when: p.stat.exists == True
+  notify: restart mysql
+
+- name: "mysql/mariadb: export confd path variable"
+  set_fact:
+    mysql_confd: "/etc/mysql/mariadb.conf.d/"
